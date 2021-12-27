@@ -1,0 +1,196 @@
+---
+title: Detector Dog Survey (C-BARQ derived)
+author: Liz Hare
+date: "`r Sys.Date()`"
+email: "lizhare@gmail.com"
+output:
+    html_document:
+        toc: true
+        toc_depth: 5
+        number_sections: true
+---
+
+``` {r, setup, include=FALSE, echo=FALSE}
+### load packages
+library(tidyverse)
+library(lubridate)
+library(janitor)
+library(knitr)
+library(kableExtra)
+library(gtsummary)
+library(openxlsx)
+library(psych)
+library(correlation)
+library(gluedown) ## inline print lists from R
+
+### get file
+
+dds <- read.xlsx("../intFIles/Detection-dog-survey.xlsx", sheet=1)
+
+### remove records with shifted character fields
+### list dog IDs for bad records
+badDogs <- c(155436, 155545)
+### keep all except bad dog
+dds <- dds[!dds$Dog.ID %in% badDogs, ]
+
+### change erroneous character cols to numeric
+dds$Fear21 <- as.numeric(dds$Fear21)
+dds$Excite35 <- as.numeric(dds$Excite35)
+```
+
+## Analysis of Demographic Data
+
+To be completed.
+
+``` {r, cleanNames, results="asis", echo=FALSE}
+ddItems <- select(dds, c(Train01:Agg20, Fear21:Fear31, SepProb33:SepProb34,
+                         Excite35:Excite38, AttAtt39:AttAtt42, Play43:Play46,
+                         Frus47:Frus50, Misc51:Misc71))
+### pull out items
+trainItems <- select(dds, Train01:Train08)
+### class(dds$othersituationsagg)
+### above variable character so not plotted-- all "othersituations* vars
+aggItems <- select(dds, Agg09:Agg20)
+fearItems <- select(dds, Fear21:Fear31)
+## one fear item is character?
+##sapply(fearItems, class)
+## 21 is character
+### table(fearItems$Fear21, useNA="ifany")
+sepItems <- select(dds, SepProb33:SepProb34)
+excitItems <- select(dds, Excite35:Excite38)
+attItems <- select(dds, AttAtt39:AttAtt42)
+playItems <- select(dds, Play43:Play46)
+frustItems <- select(dds, Frus47:Frus50)
+miscItems <- select(dds, Misc51:Misc71)
+
+```
+
+## Analysis of Items
+
+``` {r, describeItems, results="asis", echo=FALSE}
+### are they all numeric?
+###table(sapply(ddItems, class))
+### why are some character?
+### sapply(ddItems, class)
+### these are places for verbal additons to quantative answers
+### drop them
+### dim(    ddItems)
+ddItems <- select_if(ddItems, is.numeric)
+### dim(ddItems)
+###tail(names(ddItems))
+
+### summary stats
+### count missing
+
+countMissing <- sapply(ddItems, function(x) sum(is.na(x)))
+means <- sapply(ddItems, mean, na.rm=TRUE)
+sds <- sapply(ddItems, sd, na.rm=TRUE)
+mins <- sapply(ddItems, min, na.rm=TRUE)
+maxes <- sapply(ddItems, max, na.rm=TRUE)
+skews <- sapply(ddItems, skew, na.rm=TRUE)
+kurts <- sapply(ddItems, kurtosi, na.rm=TRUE)
+### shapiro-wilk test for normality
+sws <- sapply(ddItems, function(x) shapiro.test(x)$statistic)
+swp <- sapply(ddItems, function(y) shapiro.test(y)$p.value)
+
+bigDesc <- data.frame(means, sds, mins, maxes, skews, kurts, sws, swp)
+colnames(bigDesc) <- c("Mean", "SD", "Min", "Max", "Skewness", "Kurtosis",
+                       "Shapiro-Wilk Score", "Shapiro-Wilk p")
+bigDescK <- kable(bigDesc, digits=2,
+      caption="Descriptive Statitics for Detector-C-BARQ Items")
+
+kable_styling(bigDescK)
+
+```
+
+According to Watkins (2021), items should be removed if they have skewness > 2.0 or 
+kurtosis > 7.0. These items would violate the assumptions of the Pearson correlation coefficients 
+that factor analysis is based on. (Do we need to consider the items as ordinal discrete values?)  
+
+Items with skewness > 2.0 include 
+`r md_bullet(largeSkewItems)`
+
+items with kurtosis > 7.0 include
+	`r md_bullet(largeKurtItems)`
+
+For the current data set, `r length(removeSK)`
+items would be removed for the factor analysis, leaving
+	`r ncol(n1)` to analyze.
+
+### Count Plots
+
+#### Trainability
+
+
+``` {r, plotTrainFreq, results="asis", echo=FALSE, fig.width=12, fig.height=24}
+### plot
+
+
+
+plotFreq <- function(x) {
+    longData <- pivot_longer(x, cols = everything(),
+                             names_to = "item", values_to = "score")
+    ggplot(longData, aes(x = score)) +
+                     geom_bar(na.rm=TRUE) +
+                     facet_wrap(vars(item), ncol=4) +
+                     labs(x = "Score", y="Count",
+                          title="Counts")
+    }
+plotFreq(trainItems) 
+```
+
+#### Aggression
+
+``` {r, plotAggFreq, results="asis", echo=FALSE}
+plotFreq(aggItems)
+```
+
+#### Fear
+
+``` {r, plotFearFreq, results="asis", echo=FALSE}
+plotFreq(fearItems)
+```
+
+
+#### Separation
+
+``` {r, plotSepFreq, results="asis", echo=FALSE}
+plotFreq(sepItems)
+```
+
+
+#### Excitability
+
+``` {r, plotExcitFreq, results="asis", echo=FALSE}
+plotFreq(excitItems)
+```
+
+#### Attention-Seeking
+
+``` {r, plotAttFreq, results="asis", echo=FALSE}
+plotFreq(attItems)
+```
+
+
+
+#### Play
+
+``` {r, plotPlayFreq, results="asis", echo=FALSE}
+plotFreq(playItems)
+```
+
+
+#### Frustration
+
+``` {r, plotFrustFreq, results="asis", echo=FALSE}
+plotFreq(frustItems)
+```
+
+
+#### Miscellaneous
+
+``` {r, plotMiscFreq, results="asis", echo=FALSE}
+plotFreq(miscItems)
+```
+
+```
