@@ -38,9 +38,68 @@ dds$Fear21 <- as.numeric(dds$Fear21)
 dds$Excite35 <- as.numeric(dds$Excite35)
 ```
 
-## Analysis of Demographic Data
+# Analysis of Demographic Data
 
-To be completed.
+
+``` {r, demog, results="asis", echo=FALSE}
+source("demog.R")
+```
+
+## Sex and Neuter Status
+
+there are `r nrow(dds)` dogs in this data set with 
+`r nrow(dds[dds$sexF == "male", ])` males and
+`r nrow(dds[dds$sexF == "female", ])` females. 
+A surprising proportion of dogs are unknown for neuter status
+(`r nrow(dds[dds$neuteredF == "unknown", ])/nrow(dds)`).
+
+``` {r, sexTab, results="asis", echo=FALSE}
+sexTab <- tbl_summary(dds, by=sexF,
+                      include=neuteredF,
+                      statistic = all_categorical() ~ "{n} {p}")
+add_overall(sexTab)
+                    
+```
+
+
+## Breed
+
+### Breed Groups
+
+``` {r, breedGroupCount, results="asis", echo=FALSE}
+breedGroupTab <- tbl_summary(dds, include=breedGroupF,
+                             statistic =  all_categorical() ~ "{n} {p}")
+breedGroupTab
+```
+
+### All Breeds
+
+``` {r, breedCount, results="asis", echo=FALSE}
+breedTab <- tbl_summary(dds, include=breedF,
+                        statistic = all_categorical() ~ "{n} {p}")
+breedTab
+
+breedTab
+```
+
+## Age, Training and Retirement
+
+``` {r, ageWorkStatus, results="asis", echo=FALSE}
+
+s1 <- psych::describe(dds$ageY)
+s1 <- round(s1, 2)
+s1K <- kable(s1, caption="Univariate Statistics for Age in Years")
+kable_styling(s1K)
+
+ageWorkStatusTab <- tbl_summary(dds, by=workingStatusF,
+                                include=ageY,
+                                type = everything() ~ "continuous",
+                                statistic = all_continuous() ~ "{mean} {sd} {min} {max}",
+                                digits = list(everything() ~ c(2, 2, 2, 2)))
+add_overall(ageWorkStatusTab)
+                                              
+```
+
 
 ``` {r, cleanNames, results="asis", echo=FALSE}
 ddItems <- select(dds, c(Train01:Agg20, Fear21:Fear31, SepProb33:SepProb34,
@@ -65,7 +124,7 @@ miscItems <- select(dds, Misc51:Misc71)
 
 ```
 
-## Analysis of Items
+# Analysis of Items
 
 ``` {r, describeItems, results="asis", echo=FALSE}
 ### are they all numeric?
@@ -97,9 +156,19 @@ bigDesc <- data.frame(means, sds, mins, maxes, skews, kurts, sws, swp)
 colnames(bigDesc) <- c("Mean", "SD", "Min", "Max", "Skewness", "Kurtosis",
                        "Shapiro-Wilk Score", "Shapiro-Wilk p")
 bigDescK <- kable(bigDesc, digits=2,
-      caption="Descriptive Statitics for Detector-C-BARQ Items")
+      caption="Descriptive Statistics for Detector-C-BARQ Items")
 
 kable_styling(bigDescK)
+
+largeSkew <- bigDesc[bigDesc$skews < -2 & bigDesc$skews > 2, ]
+
+largeSkewItems <- rownames(bigDesc[bigDesc$Skewness < -2 & bigDesc$skews > 2, ])
+largeKurtItems <- rownames(bigDesc[bigDesc$Kurtosis > 7, ])
+### all items you'd remove
+removeSK <- unique(c(largeSkewItems, largeKurtItems))
+### new df without non-normal items
+n1 <- ddItems[ , -which(colnames(ddItems) %in% removeSK)]
+dim(n1)
 
 ```
 

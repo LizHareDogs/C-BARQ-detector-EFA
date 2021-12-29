@@ -143,3 +143,8 @@ dds$neuteredF <- factor(dds$neutered)
 ### country
 table(dds$Country)
 dds$countryF <- factor(dds$Country)
+
+### working status
+table(dds$workingstatus, useNA="ifany")
+dds$workingStatusF <- factor(dds$workingstatus,
+                             levels=c("training", "working", "retired"))
