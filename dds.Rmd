@@ -279,6 +279,8 @@ ddItems <- select_if(ddItems, is.numeric)
 ### dim(ddItems)
 ###tail(names(ddItems))
 
+save(ddItems, file="~/data/dhs/intFiles/ddCBARQ.Rda")
+
 ### summary stats
 ### count missing
 
