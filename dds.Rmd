@@ -1,5 +1,5 @@
 ---
-title: Detector Dog Survey (C-BARQ derived)
+title: C-BARQ-DD (Detector Dog) Descriptive Statistics
 author: Liz Hare
 date: "`r Sys.Date()`"
 email: "lizhare@gmail.com"
@@ -66,6 +66,10 @@ add_overall(sexTab)
 
 ### Breed Groups
 
+Crossed and mixed breeds were assigned missing values, as were rare breeds that I couldn't 
+classify.  
+
+
 ``` {r, breedGroupCount, results="asis", echo=FALSE}
 breedGroupTab <- tbl_summary(dds, include=breedGroupF,
                              statistic =  all_categorical() ~ "{n} {p}")
@@ -80,6 +84,17 @@ breedTab <- tbl_summary(dds, include=breedF,
 breedTab
 
 breedTab
+```
+
+## Country
+
+Responses came from `r nlevels(dds$countryF)` countries.
+
+``` {r, countryTab, results="asis", echo=FALSE}
+countryTab <- tbl_summary(dds, include=countryF,
+                          type = everything() ~ "categorical",
+                          statistic = all_categorical() ~ "{n} {p}")
+countryTab
 ```
 
 ## Age, Training and Retirement
@@ -99,6 +114,131 @@ ageWorkStatusTab <- tbl_summary(dds, by=workingStatusF,
 add_overall(ageWorkStatusTab)
                                               
 ```
+
+## Types of Work
+
+### Dual Purpose
+
+
+There are `r nrow(dds[dds$duallyTrainedF == "yes", ])` dual purpose dogs
+`r round(nrow(dds[dds$duallyTrainedF == "yes", ])/nrow(dds), digits=2)*100`%).
+
+#### What breeds are dually trained?
+
+``` {r, dualTrain, results="asis", echo=FALSE}
+### convert to factor
+breedDualTab <- tbl_summary(ddsDual, include=breedF,
+                            statistic = all_categorical() ~ "{n} {p}")
+breedDualTab
+```
+
+## Odors Detected
+
+``` {r, odorVars, results="asis", echo=FALSE}
+odorTab <- tbl_summary(odorVars, 
+                       include=odoraccelerant:odorother,
+                       type=everything() ~ "dichotomous",
+                       statistic = all_categorical() ~ "{n} {p}")
+odorTab
+```
+
+### Odors entered under "Other"
+
+There are too many responses to print here 
+(`r nrow(dds[dds$odorother == "yes" & !is.na(dds$odordescription), ])`). 
+Lots of them are nosework-related. Let me know if you want the list.
+
+``` {r, otherOdors, results="asis", echo=FALSE}
+##kable(dds[dds$odorother == "yes", c("odordescription")],
+##      caption = "Odors Entered Under 'Other'")
+```
+
+## Certification
+
+``` {r, certTab, results="asis", echo=FALSE}
+certTab <- tbl_summary(certificationVars,
+##                         include=cecertificatearda:certificateuspda,
+                         type=everything() ~ "dichotomous",
+                         statistic = all_categorical() ~ "{n} {p}")
+certTab
+```
+
+### Other Certifying organizations
+
+There are too many answers to print here
+(`r nrow(dds[dds$certificateother == "yes" & !is.na(dds$certificatedescription), ])`).
+
+``` {r, otherCert, results="asis", echo=FALSE}
+## kable(dds[dds$certificateother == "yes" & !is.na(dds$certificatedescription), c("certificatedescription"), ],
+##      caption = "Certificates Entered Under 'Other'")
+```
+
+## Alert Type
+
+``` {r, alertTab, results="asis", echo=FALSE}
+alertTab <- tbl_summary(dds, include=alerttypeF,
+                        type = everything() ~ "categorical",
+                        statistic = all_categorical() ~ "{n} {p}")
+alertTab
+```
+
+## Reward System
+
+``` {r, rewardTab, results="asis", echo=FALSE}
+rewardTab <- tbl_summary(dds, include=rewardsystemF,
+                         type = everything() ~ "categorical",
+                         statistic = all_categorical() ~ "{n} {p}")
+rewardTab
+```
+
+## Dogs Handled Before Current
+
+``` {r, dogsHandledTab, results="asis", echo=FALSE}
+dogsHandledTab <- tbl_summary(dds, include=dogshandledbeforeF,
+                              type = everything () ~ "categorical",
+                              statistic = all_categorical() ~ "{n} {p}")
+dogsHandledTab
+```
+
+## Dogs' Home
+
+``` {r, dogsHome, results="asis", echo=FALSE}
+dogsHomeTab <- tbl_summary(dds, include=dogshomelocationF,
+                           type = everything () ~ "categorical",
+                           statistic = all_categorical() ~ "{n} {p}")
+dogsHomeTab
+```
+
+## Owner Rating of Scent Work Ability and General Behavior and Temperament
+
+### Scent Work
+
+``` {r, scenntWorkDesc, results="asis", echo=FALSE}
+
+scentDesc <- psych::describe(dds$scentrating)
+scentDesc2 <- round(scentDesc, 2)
+scentDescK <- kable(scentDesc2,
+                    caption = "Owners' Rating of Dogs' Scent Detection Work Ability")
+kable_styling(scentDescK)
+```
+
+### General Behavior and Temperament
+
+``` {r, behaviorRate, results="asis", echo=FALSE}
+behavDesc <- psych::describe(dds$behaviorrating)
+behavDesc <- round(behavDesc, 2)
+behavDescK <- kable(behavDesc,
+                    caption = "Owners' Rating of Dogs' General Behavior and Temperament")
+kable_styling(behavDescK)
+```
+
+## DNA Sample Availability
+
+There were `r nrow(dds[dds$sampleprovidedF == "yes", ])` owners willing to provide DNA samples 
+(`r round(nrow(dds[dds$sampleprovidedF == "yes", ])/nrow(dds)*100)`%).
+
+
+# Descriptive Statistics and Plots of C-BARQ-DD Items
 
 
 ``` {r, cleanNames, results="asis", echo=FALSE}
@@ -124,7 +264,8 @@ miscItems <- select(dds, Misc51:Misc71)
 
 ```
 
-# Analysis of Items
+
+
 
 ``` {r, describeItems, results="asis", echo=FALSE}
 ### are they all numeric?

@@ -148,3 +148,73 @@ dds$countryF <- factor(dds$Country)
 table(dds$workingstatus, useNA="ifany")
 dds$workingStatusF <- factor(dds$workingstatus,
                              levels=c("training", "working", "retired"))
+### types of work
+### dual purpose
+table(dds$duallytrained, useNA="ifany")
+dds$duallyTrainedF <- factor(dds$duallytrained,
+                             level=c("no", "yes"))
+
+### odor detection variables
+odorVars <- dplyr::select(dds, starts_with("odor"))
+### remove column with free text so you can convert others to no/yes factors
+odorVars$odordescription <- NULL
+### convert to factors
+### approach to converting all columns from
+dim(odorVars)
+index <- 1:ncol(odorVars)
+odorVars[ ,index] <- lapply(odorVars[ ,index], as.factor)
+sapply(odorVars, class)
+sapply(odorVars, levels)
+
+
+
+
+
+
+### separate dually trained dogs for table
+### convert to factor
+dds$duallyTrainedF <- factor(dds$duallytrained,
+                                levels=c("no", "yes"))
+### df with only dually trained dogs
+ddsDual <- dds[dds$duallyTrainedF == "yes", ]
+### remove unused levels of Breed that only occur in the single purpose dogs
+ddsDual$breedF <- droplevels(ddsDual$breedF)
+table(ddsDual$breedF)
+
+
+certificationVars <- dplyr::select(dds, starts_with("cert"))
+certificationVars$certificatedescription <- NULL
+
+### convert to factors
+### approach to converting all columns from
+index <- 1:ncol(certificationVars)
+certificationVars[ ,index] <- lapply(certificationVars[ ,index], as.factor)
+sapply(certificationVars, class)
+sapply(certificationVars, levels)
+### make factors for some individual variables
+table(dds$alerttype, useNA="ifany")
+dds$alerttypeF <- factor(dds$alerttype)
+
+
+table(dds$rewardsystem, useNA="ifany")
+dds$rewardsystemF <- factor(dds$rewardsystem)
+
+table(dds$dogshandledbefore, useNA="ifany")
+dds$dogshandledbeforeF <- factor(dds$dogshandledbefore,
+                                 levels=c("0", "1 to 2", "3 to 5", "more than 5"))
+
+table(dds$dogshomelocation, useNA="ifany")
+dds$dogshomelocationF <- factor(dds$dogshomelocation)
+
+
+### keep ratings numeric
+table(dds$scentrating, useNA="ifany")
+table(dds$behaviorrating, useNA="ifany")
+### remove responses that are out of bounds
+class(dds$scentrating)
+dds$scentrating[dds$scentrating > 10] <- NA
+dds$behaviorrating[dds$behaviorrating > 10] <- NA
+
+### sample (dna?)
+table(dds$sampleprovided, useNA="ifany")
+dds$sampleprovidedF <- factor(dds$sampleprovided)## DNA sample
