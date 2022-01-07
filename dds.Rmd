@@ -56,9 +56,11 @@ A surprising proportion of dogs are unknown for neuter status
 ``` {r, sexTab, results="asis", echo=FALSE}
 sexTab <- tbl_summary(dds, by=sexF,
                       include=neuteredF,
-                      statistic = all_categorical() ~ "{n} {p}")
+                      statistic = all_categorical() ~ "{n}, {p}%")
 add_overall(sexTab)
-                    
+
+
+
 ```
 
 
@@ -72,7 +74,7 @@ classify.
 
 ``` {r, breedGroupCount, results="asis", echo=FALSE}
 breedGroupTab <- tbl_summary(dds, include=breedGroupF,
-                             statistic =  all_categorical() ~ "{n} {p}")
+                             statistic =  all_categorical() ~ "{n}, {p}%")
 breedGroupTab
 ```
 
@@ -80,7 +82,7 @@ breedGroupTab
 
 ``` {r, breedCount, results="asis", echo=FALSE}
 breedTab <- tbl_summary(dds, include=breedF,
-                        statistic = all_categorical() ~ "{n} {p}")
+                        statistic = all_categorical() ~ "{n}, {p}%")
 breedTab
 
 breedTab
@@ -93,7 +95,7 @@ Responses came from `r nlevels(dds$countryF)` countries.
 ``` {r, countryTab, results="asis", echo=FALSE}
 countryTab <- tbl_summary(dds, include=countryF,
                           type = everything() ~ "categorical",
-                          statistic = all_categorical() ~ "{n} {p}")
+                          statistic = all_categorical() ~ "{n}, {p}%")
 countryTab
 ```
 
@@ -109,7 +111,7 @@ kable_styling(s1K)
 ageWorkStatusTab <- tbl_summary(dds, by=workingStatusF,
                                 include=ageY,
                                 type = everything() ~ "continuous",
-                                statistic = all_continuous() ~ "{mean} {sd} {min} {max}",
+                                statistic = all_continuous() ~ "{mean} ({sd}) ({min} - {max})",
                                 digits = list(everything() ~ c(2, 2, 2, 2)))
 add_overall(ageWorkStatusTab)
                                               
@@ -128,7 +130,7 @@ There are `r nrow(dds[dds$duallyTrainedF == "yes", ])` dual purpose dogs
 ``` {r, dualTrain, results="asis", echo=FALSE}
 ### convert to factor
 breedDualTab <- tbl_summary(ddsDual, include=breedF,
-                            statistic = all_categorical() ~ "{n} {p}")
+                            statistic = all_categorical() ~ "{n}, {p}%")
 breedDualTab
 ```
 
@@ -138,7 +140,7 @@ breedDualTab
 odorTab <- tbl_summary(odorVars, 
                        include=odoraccelerant:odorother,
                        type=everything() ~ "dichotomous",
-                       statistic = all_categorical() ~ "{n} {p}")
+                       statistic = all_categorical() ~ "{n}, {p}%")
 odorTab
 ```
 
@@ -159,7 +161,7 @@ Lots of them are nosework-related. Let me know if you want the list.
 certTab <- tbl_summary(certificationVars,
 ##                         include=cecertificatearda:certificateuspda,
                          type=everything() ~ "dichotomous",
-                         statistic = all_categorical() ~ "{n} {p}")
+                         statistic = all_categorical() ~ "{n}, {p}%")
 certTab
 ```
 
@@ -178,7 +180,7 @@ There are too many answers to print here
 ``` {r, alertTab, results="asis", echo=FALSE}
 alertTab <- tbl_summary(dds, include=alerttypeF,
                         type = everything() ~ "categorical",
-                        statistic = all_categorical() ~ "{n} {p}")
+                        statistic = all_categorical() ~ "{n}, {p}%")
 alertTab
 ```
 
@@ -187,7 +189,7 @@ alertTab
 ``` {r, rewardTab, results="asis", echo=FALSE}
 rewardTab <- tbl_summary(dds, include=rewardsystemF,
                          type = everything() ~ "categorical",
-                         statistic = all_categorical() ~ "{n} {p}")
+                         statistic = all_categorical() ~ "{n}, {p}%")
 rewardTab
 ```
 
@@ -196,7 +198,7 @@ rewardTab
 ``` {r, dogsHandledTab, results="asis", echo=FALSE}
 dogsHandledTab <- tbl_summary(dds, include=dogshandledbeforeF,
                               type = everything () ~ "categorical",
-                              statistic = all_categorical() ~ "{n} {p}")
+                              statistic = all_categorical() ~ "{n}, {p}%")
 dogsHandledTab
 ```
 
@@ -205,7 +207,7 @@ dogsHandledTab
 ``` {r, dogsHome, results="asis", echo=FALSE}
 dogsHomeTab <- tbl_summary(dds, include=dogshomelocationF,
                            type = everything () ~ "categorical",
-                           statistic = all_categorical() ~ "{n} {p}")
+                           statistic = all_categorical() ~ "{n}, {p}%")
 dogsHomeTab
 ```
 
