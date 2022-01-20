@@ -20,6 +20,7 @@ library(psych)
 library(mice)
 library(mifa)
 library(EFAtools)
+library(Rgraphviz)
 
 intFiles <- "/Users/hare/data/dhs/intFiles/"
 load(paste0(intFiles, "ddCBARQ.Rda"))
@@ -309,7 +310,7 @@ SCREE(imputedCorr, eigen_type = "EFA")
 ```
   
 
-## Unweighted Least Squares, Varimax Rotation, 
+## Unweighted Least Squares, Varimax Rotation, Models from 5 to 20 Factors
 
 This is the method used for the original C-BARQ. Using least squares is good when you have 
 non-normality. Varimax rotation might not be the best chose because it doesn't allow
@@ -318,45 +319,119 @@ aggression). But we should replicate the original analysis so we can compare fin
 
 I have run this analysis for the possibilities of anywhere from 5 15 factors, but am still sorting through the large output produced to figure out how to present it in a way that's not overwhelming.
 
+### Goodness-of-Fit Statistics
+
 ``` {r, EFAvarimax, results="asis", echo=FALSE}
 ### run a series with n_factors 5-20
 
+ULS05 <- EFA(imputedCorr, n_factors = 5, N = 734, method = "ULS", rotation = "varimax")
+ULS06 <- EFA(imputedCorr, n_factors = 6, N = 734, method = "ULS", rotation = "varimax")
+ULS07 <- EFA(imputedCorr, n_factors = 7, N = 734, method = "ULS", rotation = "varimax")
+ULS08 <- EFA(imputedCorr, n_factors = 8, N = 734, method = "ULS", rotation = "varimax")
+ULS09 <- EFA(imputedCorr, n_factors = 9, N = 734, method = "ULS", rotation = "varimax")
+ULS10 <- EFA(imputedCorr, n_factors = 10, N = 734, method = "ULS", rotation = "varimax")
+ULS11 <- EFA(imputedCorr, n_factors = 11, N = 734, method = "ULS", rotation = "varimax")
+ULS12 <- EFA(imputedCorr, n_factors = 12, N = 734, method = "ULS", rotation = "varimax")
+ULS13 <- EFA(imputedCorr, n_factors = 13, N = 734, method = "ULS", rotation = "varimax")
+ULS14 <- EFA(imputedCorr, n_factors = 14, N = 734, method = "ULS", rotation = "varimax")
+ULS15 <- EFA(imputedCorr, n_factors = 15, N = 734, method = "ULS", rotation = "varimax")
+ULS16 <- EFA(imputedCorr, n_factors = 16, N = 734, method = "ULS", rotation = "varimax")
+ULS17 <- EFA(imputedCorr, n_factors = 17, N = 734, method = "ULS", rotation = "varimax")
+ULS18 <- EFA(imputedCorr, n_factors = 18, N = 734, method = "ULS", rotation = "varimax")
+ULS19 <- EFA(imputedCorr, n_factors = 19, N = 734, method = "ULS", rotation = "varimax")
+ULS20 <- EFA(imputedCorr, n_factors = 20, N = 734, method = "ULS", rotation = "varimax")
+
+### display goodness-of-fit stats
+
+ULS05fit <- unlist(ULS05$fit_indices)
+ULS06fit <- unlist(ULS06$fit_indices)
+ULS07fit <- unlist(ULS07$fit_indices)
+ULS08fit <- unlist(ULS08$fit_indices)
+ULS09fit <- unlist(ULS09$fit_indices)
+ULS10fit <- unlist(ULS10$fit_indices)
+ULS11fit <- unlist(ULS11$fit_indices)
+ULS12fit <- unlist(ULS12$fit_indices)
+ULS13fit <- unlist(ULS13$fit_indices)
+ULS14fit <- unlist(ULS14$fit_indices)
+ULS15fit <- unlist(ULS15$fit_indices)
+ULS16fit <- unlist(ULS16$fit_indices)
+ULS17fit <- unlist(ULS17$fit_indices)
+ULS18fit <- unlist(ULS18$fit_indices)
+ULS19fit <- unlist(ULS19$fit_indices)
+ULS20fit <- unlist(ULS20$fit_indices)
+
+ULSfit <- data.frame(ULS05fit, ULS06fit, ULS07fit, ULS08fit, ULS09fit, ULS10fit,
+                     ULS11fit, ULS12fit, ULS13fit, ULS14fit, ULS15fit, ULS16fit,
+                     ULS17fit, ULS18fit, ULS19fit, ULS20fit)
+colnames(ULSfit) <- c("F5", "F6", "F7", "F8", "F9", "F10",
+                      "F11", "F12", "F13", "F14", "F15",
+                      "F16", "F17", "F18", "F19", "F20")
 
 
-## EFA(imputedCorr, n_factors = c(5:15), N = 734, method="ULS", rotation="varimax")
-## prefix <- "Umodel"
-## suffix <- c(5:20)
-## UmodelNames <- paste0(prefix, suffix)
-## for (i in suffix) {
-##     UmodelNames[i] <- EFA(imputedCorr,
-##     n_factors = suffix[i],
-##     N = 734,
-##     method = "ULS",
-##     rotation = "varimax")
-## }
+ULSfitTabK <- kable(ULSfit, digits=2,
+      caption="Measures of fit (described below) for Factor Analyses with from 5 to 20 Factors")
+kable_styling(ULSfitTabK)
+```
+
+What are thes statistics?
+
+- **chi** chi-squared for the model
+- **df** the number of degrees of freedom in the model
+- **p_chi** the p value for the chi-square statistic
+- **CAF** Common part accounted for, THe extent to which the common variance 
+in the data is captured in the common factor model. Larger amounts of common variance indicate a worse fit (@Lorenzo11).
+- **CFI** Comparative Fit Index, Measure of fit by comparing proposed model with more restrictive baseline mo del. 0 - 1 where 1 indicates perfect fit (@lorenzo11).
+- **RMSEA** Root Mean Square Error of Approximation, degree of misfit in the proposed model based on the residuals. Ranges from 0 to infinity with 0 indicating perfect model fit (@lorenzo11).
+0 **RMSEA_LB** Root Mean Square Error of Approximation 90% confidence interval for RMSEA (@lorenzo11).
+- **AIC** Akaike Information Criterion measures information content in models by maximum likelihood. Lower is better.
+- **BIC** Bayes Information Criterion, similar to AIC but using Bayesian methods  
+
+No documentation for:
+- **Fm**
+- **chi_null**
+- **df_null**
+- **p_null** but they are all zero so I suspect it's a comparison with a model with no correlations between items.  
+
+Comparing the goodness-of-fit measures for models with different numbers of factors,
+we still get some variation and not a definite number of factors to choose. 
+Under the chi-square test, which is not one of the major methods recommended models 
+with from 5-10 factors were most significant (*actually, @watkins20 recommends that it not be used*). the "best" CAF value is at 5 factors. CFI hits 1.00 at 10 
+factors and stays there for larger numbers of factors. RSMEA hits 0.00 (best value) 
+at 11 factors. For AIC and BIC, lower is better and the minima are at 16 and 8 factors, 
+respectively. 
+
+### Variance Explained by Factors
+
+``` {r, ULSvarianceExplained, results="asis", echo=FALSE}
+ULSmodels <- list(ULS05, ULS06, ULS07, ULS08, ULS09, ULS10,
+               ULS11, ULS12, ULS13, ULS14, ULS15, ULS16,
+               ULS17, ULS18, ULS19, ULS20)
 
 
 
+lapply(ULSmodels, function(x)
+    kable(x$vars_accounted, digits = 2, padding = 2, format = "pipe",
+        caption = paste0("Percent Variance Explained for Models with ",
+                         x$settings$n_factors, " Factors")))
 
-## numFact <- c(5:20)
-## ULSvarimax <- sapply(numFact, function(x) 
-##     EFA(imputedCorr,
-##         n_factors = x,
-##         N = 734,
-##         method = "ULS",
-##         rotation = "varimax")
-## )
-## )for (x in 5:20) {
-
-    
-##     EFA_ULS_varimax$x <- EFA(imputedCorr,
-##                        n_factors = x,
-##                        N = 734,
-##                        method = "ULS",
-##                        rotation = "varimax")
-## }
-## ### the type option is not needed for ULS
-
-## ### extract indices of fit
+## for (i in varExplTab) {
+##     print(i)
+##     }
+    ## kable(x$vavurs_accounted, digits = 2,
+    ##       caption = paste0("Percent Variance Explained for Models with ",
+    ##                        x$settings$n_factors, " Factors")))
 
 ```
+
+### Factor Loadings 
+
+
+```  {r, ULSfactorLoadings, results="asis", echo=FALSE, fig.keep="high"}
+for (i in 5:20) { 
+    plot(fa(imputedCorr, n_factors = i, N = 734, method = "ULS", rotation = "varimax"),
+         main = paste0("Factor Loadings for Model with ", i, " Factors"))
+}
+
+```
+
+
