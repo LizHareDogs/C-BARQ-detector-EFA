@@ -244,7 +244,7 @@ There were `r nrow(dds[dds$sampleprovidedF == "yes", ])` owners willing to provi
 
 
 ``` {r, cleanNames, results="asis", echo=FALSE}
-ddItems <- select(dds, c(Train01:Agg20, Fear21:Fear31, SepProb33:SepProb34,
+ddItems <- select(dds, c(Train01:Agg20, Fear21:Fear31, SepProb32:SepProb34,
                          Excite35:Excite38, AttAtt39:AttAtt42, Play43:Play46,
                          Frus47:Frus50, Misc51:Misc71))
 ### pull out items
@@ -257,7 +257,7 @@ fearItems <- select(dds, Fear21:Fear31)
 ##sapply(fearItems, class)
 ## 21 is character
 ### table(fearItems$Fear21, useNA="ifany")
-sepItems <- select(dds, SepProb33:SepProb34)
+sepItems <- select(dds, SepProb32:SepProb34)
 excitItems <- select(dds, Excite35:Excite38)
 attItems <- select(dds, AttAtt39:AttAtt42)
 playItems <- select(dds, Play43:Play46)
