@@ -1,0 +1,520 @@
+---
+title: "Factor Analysis of C-BARQ-DD Questionnaire Items v2, with item 32 fixed"
+author: Liz Hare PhD
+date: "`r Sys.Date()`"
+email: "lizhare@gmail.com"
+output:
+    html_document:
+        toc: true
+        toc_depth: 5
+        number_sections: true
+bibliography: "factorAnalysis.bib"
+---
+
+``` {r, setup, results=FALSE, echo=FALSE}
+library(tidyverse)
+library(knitr)
+library(kableExtra)
+library(gtsummary)
+library(psych)
+library(mice)
+library(mifa)
+library(EFAtools)
+library(Rgraphviz)
+
+intFiles <- "/Users/hare/data/dhs/intFiles/"
+load(paste0(intFiles, "ddCBARQ.Rda"))
+```
+
+# Data Preparation
+
+## Correlation Matrix of Item Responses
+
+The correlation matrix for all pairs of items with pairwise missing values deleted
+is in the file `corMatrix1.csv`. It's recommended that some of the items should be correlated
+for factor analysis, but that the correlations shouldn't be in the high .9s because that would 
+indivcate that the items are too similar. The following table lists the maximum correlation for
+each item.
+
+``` {r, corMatrix1, results="asis", echo=FALSE}
+corMatrix1 <- round(cor(ddItems, use = "pairwise.complete.obs"), 2)
+write.csv(corMatrix1, file=paste0(intFiles, "corMatrix1.csv"))
+
+### As a quick way to get an overview, get max correlation for each colum
+### set diagonal to NA since that's the correlation with itself and is always 1
+diag(corMatrix1) <- NA
+corDF1<- as.data.frame(corMatrix1)
+maxCor1 <- sapply(corDF1, max, na.rm=TRUE)
+          
+### display max correlation for each item                  max)
+maxCor1K <- kable(maxCor1,
+                  caption = "Maximum Correlation for each Item with All Other Items")
+kable_styling(maxCor1K)
+```
+
+
+## Tests for Factorability of Raw Data
+
+### Bartlett Test of Sphericity
+
+From the EFAtools documentation
+
+> This function tests whether a correlation matrix is significantly different from an identity matrix (Bartlett, 1951). If the Bartlett's test is not significant, the correlation matrix is not suitable for factor analysis because the variables show too little covariance.
+
+``` {r, preImputationBartlett, results=FALSE, echo=FALSE}
+preBart <- BARTLETT(cor(ddItems, use="pairwise.complete.obs"), N = 734)
+
+```
+
+For the Bartlett test, the chi-square is `r round(preBart$chisq, 2)` with `r round(preBart$df, 2)` DF
+and a p-value of `r preBart$p_value`. This significant
+value indicates the matrix is different from one with no
+relationships between items.
+
+### Kaiser-Meyer-Olkin Criterion
+
+From the EFAtools documentation:
+
+> This function computes the Kaiser-Meyer-Olkin (KMO) criterion overall and for each variable in a correlation matrix. The KMO represents the degree to which each observed variable is predicted by the other variables in the dataset and with this indicates the suitability for factor analysis.
+
+``` {r, preKMO, results=FALSE, echo=FALSE}
+preKMO <- KMO(cor(ddItems, use = "pairwise.complete.obs"))
+```
+
+The overall KMO is `r round(preKMO$KMO, 2)`, indicating that the data is suitable for factor analysis.
+
+
+
+## Imputation for Missing Item Values
+
+
+
+### Patterns of Missing data
+
+It's a good idea to check whether the missing values appear in patterns. There are some 
+tests to check this but they apply to data sets with < 50 variables (https://statistics.ohlsen-web.de/multiple-imputation-with-mice/).  
+
+The plot below should display patterns of missing responses. Let me know if anything is interesting. 
+
+``` {r, missPattern, results="asis", echo=FALSE}
+missPattern <- md.pattern(ddItems)
+
+```
+
+
+Currently recommendations for handling missing values are that some methods
+used in the past, like pairwise deletion and substituting the mean or median value for the item,
+are biased and should not be used. The suggestion of removing individuals with any missing
+values isn't practical for this study; there are reasons particular items might not apply 
+to particular dogs.  
+
+Multiple imputation can be used to produce a 
+covariance matrix that can be input into factor analysis (this matrix is 
+created as part of the factor analysis, which accepts 
+either individual records or covariances. the `mifa` R package [@nassiri18]
+produces a series of covariate matrices by 
+and The matrices are then combined by to produce a final estimate.  
+
+The default number of matrices to impute is 5. I did 100 to make sure we were doing enough. Their recommendations were lower.
+
+
+
+``` {r, imputation, results=FALSE, echo=FALSE}
+load(paste0(intFiles, "imputedFactors.Rda"))
+### already run and saved:
+### imputed <- mifa(ddItems, m=100)
+### save(imputed, file=paste0(intFiles, "imputedFactors.Rda"))
+```
+
+``` {r, imputationFactors, results="asis", echo=FALSE}
+### plot and table for number of factors and variables explained (imputed$var_explained
+varExplainedPlot <- ggplot(imputed$var_explained, aes(x = n_pc, y= var_explained)) +
+                                        geom_line() +
+                                        labs(x = "Number of Factors", y = "Variance Explained",
+                                             title="Variance Explained for Each Possible Number of Factors")
+varExplainedPlot
+
+varExplainedK <- kable(imputed$var_explained, digits=2,
+                       caption="Percent of Variance Explained for Each Potential Number of Factors")
+kable_styling(varExplainedK)
+```
+
+It seems a little strange that there isn't any error variance? Oh, PCA is the one 
+with the error variance, but that is more focused on individual differences than 
+whether there are shared underlying factors.
+
+
+### Tests of Factorability for Imputed data
+#### Bartlett's Test of Sphericity
+
+From the `EFAtools` documentation:  
+
+> This function tests whether a correlation matrix is significantly different from an identity matrix (Bartlett, 1951). If the Bartlett's test is not significant, the correlation matrix is not suitable for factor analysis because the variables show too little covariance.  
+
+``` {r, bartlett, results=FALSE, echo=FALSE}
+### some of these require correlation rather than cov matrix as input
+imputedCorr <- cov2cor(imputed$cov_combined)
+bart <- BARTLETT(imputedCorr, N=734)
+```
+
+For the Bartlett test chi-square = `r round(bart$chisq, 2)` with 
+`r bart$df` DF and p = 
+`r bart$p_value`. A significant p value indicates
+that the data are suitable for factoring.
+
+#### Kaiser-Meyer-Olkin Criterion
+
+From the EFAtools documentation:
+
+This function computes the Kaiser-Meyer-Olkin (KMO) criterion overall and for each variable in a correlation matrix. The KMO represents the degree to which each observed variable is predicted by the other variables in the dataset and with this indicates the suitability for factor analysis.
+
+``` {r, KMO, results=FALSE, echo=FALSE}
+kmoc <- KMO(imputedCorr)
+```
+
+
+The overall KMO value for the imputed data set is `r round(kmoc$KMO, 2)`,
+indicating the data are probably suitable for factor analysis. 
+KMO values for individual items are also available.
+
+# Factor Analysis
+
+## Tools for Estimating Number of Factors
+
+There are many available methods for estimating the number of factors to extract. 
+Luckily, they suggest using multiple ways that are compatible with the data, along
+with applying knowledge of the subject matter to examine which factors make sense. I think
+the Kaiser Guttman Criterion was used for the original C-BARQ, but it has since received a lot of
+criticism.  
+
+There are recommendations from 3 to 33 factors, so we have some exploring to do.
+
+### Empirical Kaiser Criterion
+
+From EFAtools package documentation:
+
+> The empirical Kaiser criterion incorporates random sampling variations of the eigenvalues from the Kaiser-Guttman criterion (KGC; see Auerswald & Moshagen , 2019; Braeken & van Assen, 2017). The code is based on Auerswald and Moshagen (2019).
+
+``` {r, empiricalKaiserCriterion, results=FALSE, echo=FALSE}
+ekcImputed <- EKC(imputedCorr, N = 734)
+```
+
+This method recommends `r ekcImputed$n_factors` factors for this data.
+
+### Hull method
+
+From EFAtools documentation:
+
+> The Hull method aims to find a model with an optimal balance between model fit and number of parameters. That is, it aims to retrieve only major factors (Lorenzo-Seva, Timmerman, & Kiers, 2011  
+
+Settings used:
+- method = ULS for least-squares estimation, similar to original C-BARQ analysis, robust to non-normal items- eigen_type = EFA for exploratory factor analysis rather than other types
+- 
+``` {r, hullMethods, results="asis", echo=FALSE}
+hullImputed <- HULL(imputedCorr, N = 734, method="ULS", eigen_type = "EFA")
+hullImputed
+```
+
+Abbreviations for Goodness-of-Fit Indices (from Lorenzo-Seva et  al, 2011)
+
+- CAF - 
+Common Part Accounted FOr (derived in Lorenzo-Seva et al, 2001)
+
+> Expresseses the extent to which the common variance in the data is captured in the common factor model. Range 0 - 1 where close to 0 a substantial amond ot common variance is still present in the residutal matrix after the factors (implying that more factors should be extraced.. Close to 1 means the residual matrix is free of common variance after the factors have been extracted.  
+
+- CFI - Comparative Fit Index
+
+> measures improvement in fit by comparing hypothesized model with a more restrictive,
+baseline model model. This model is usually a null model with no correlation
+observed variables. Range is from 0 to 1, where 1 is perfect fit.  
+
+- RMSEA - Root Mean Square Errorof Approximation
+
+> basedon analysis of residuaals and reflects the 
+degree of misfit in proposed model.ranges from 0 to infinity 
+with 0 being perfect fit and larger numbers indicating poorer fit.
+
+### Kaiser-Guttman Criterion
+
+I think this was used for the original C-BARQ.
+
+From the EFAtools documentation:
+
+>Probably the most popular factor retention criterion. Kaiser and Guttman suggested to retain as many factors as there are sample eigenvalues greater than 1. This is why the criterion is also known as eigenvalues-greater-than-one rule.
+
+
+Settings Used:
+- eigen__type = EFA
+
+
+``` {r, kaiserGutman, results="asis", echo=FALSE}
+KGCimputed <- KGC(imputedCorr, eigen_type = "EFA")
+```
+
+this method suggests extracting `r KGCimputed$n_fac_EFA` factors.
+
+### Parallel Method
+
+From the EFAtools documentation:
+
+>Various methods for performing parallel analysis. This function uses future_lapply for which a parallel processing plan can be selected. To do so, call library(future) and, for example, plan(multisession); see examples.  
+
+Settings Used:  
+- N = 734
+- eigen_type = "EFA"
+
+``` {r, parallelFactorestimation, results=FALSE, echo=FALSE}
+parallelImputed <- PARALLEL(imputedCorr, N = 734, eigen_type = "EFA")
+```
+
+This method suggests using `r parallelImputed$n_fac_EFA` factors.
+
+#### Comparison Data
+
+This is a variant of the parallel method. From the EFAtools documentation:
+
+>"Parallel analysis (PA) is an effective stopping rule that compares the eigenvalues of randomly generated data with those for the actual data. PA takes into account sampling error, and at present it is widely considered the best available method. We introduce a variant of PA that goes even further by reproducing the observed correlation matrix rather than generating random data. Comparison data (CD) with known factorial structure are first generated using 1 factor, and then the number of factors is increased until the reproduction of the observed eigenvalues fails to improve significantly" (Ruscio & Roche, 2012, p. 282).  
+
+* Oops, this doesn't work when there is missing raw data! Tested with small fake data set. 
+(Our imputed data is the correlation/covariance matrix, not replacements for missing raw data. 
+Goretzko, 2021) recommends using a random forest imputation method instead of mice.
+
+``` {r, comparisonDataMethod, results="asis", echo=FALSE}
+### cdImputed <- CD(ddItems, use="pairwise.complete.obs", N_pop = 734)
+```
+
+
+### Sequential Chi-Square Model Tests
+
+From the EFAtools documentation:
+
+> Sequential Chi Square Model Tests (SMT) are a factor retention method where multiple EFAs with increasing numbers of factors are fitted and the number of factors for which the Chi Square value first becomes non-significant is taken as the suggested number of factors. Preacher, Zhang, Kim, & Mels (2013) suggested a similar approach with the lower bound of the 90% confidence interval of the Root Mean Square Error of Approximation (RMSEA; Browne & Cudeck, 1992; Steiger & Lind, 1980), and with the Akaike Information Criterion (AIC). For the RMSEA, the number of factors for which this lower bound first falls below .05 is the suggested number of factors to retain. For the AIC, it is the number of factors where the AIC is lowest.
+
+
+
+``` {r, sequentialModelTests, results="asis", echo=FALSE}
+SMTimputed <- SMT(imputedCorr, N = 734)
+SMTimputed
+```
+
+### Scree Plot
+
+From the EFAtools documentation:
+
+> The scree plot was originally introduced by Cattell (1966) to perform the scree test. In a scree plot, the eigenvalues of the factors / components are plotted against the index of the factors / components, ordered from 1 to N factors components, hence from largest to smallest eigenvalue. According to the scree test, the number of factors / components to retain is the number of factors / components to the left of the "elbow" (where the curve starts to level off) in the scree plot.
+
+
+
+``` {r, screePlot, results="asis", echo=FALSE}
+SCREE(imputedCorr, eigen_type = "EFA")
+```
+  
+
+## Unweighted Least Squares, Varimax Rotation, Models from 5 to 20 Factors
+
+This is the method used for the original C-BARQ. Using least squares is good when you have 
+non-normality. Varimax rotation might not be the best chose because it doesn't allow
+covariance between factors, which we probably have (like stranger, owner, and dog-directed 
+aggression). But we should replicate the original analysis so we can compare findings.  
+
+I have run this analysis for the possibilities of anywhere from 5 15 factors, but am still sorting through the large output produced to figure out how to present it in a way that's not overwhelming.
+
+### Goodness-of-Fit Statistics
+
+``` {r, EFAvarimax, results="asis", echo=FALSE}
+### run a series with n_factors 5-20
+
+ULS05 <- EFA(imputedCorr, n_factors = 5, N = 734, method = "ULS", rotation = "varimax")
+ULS06 <- EFA(imputedCorr, n_factors = 6, N = 734, method = "ULS", rotation = "varimax")
+ULS07 <- EFA(imputedCorr, n_factors = 7, N = 734, method = "ULS", rotation = "varimax")
+ULS08 <- EFA(imputedCorr, n_factors = 8, N = 734, method = "ULS", rotation = "varimax")
+ULS09 <- EFA(imputedCorr, n_factors = 9, N = 734, method = "ULS", rotation = "varimax")
+ULS10 <- EFA(imputedCorr, n_factors = 10, N = 734, method = "ULS", rotation = "varimax")
+ULS11 <- EFA(imputedCorr, n_factors = 11, N = 734, method = "ULS", rotation = "varimax")
+ULS12 <- EFA(imputedCorr, n_factors = 12, N = 734, method = "ULS", rotation = "varimax")
+ULS13 <- EFA(imputedCorr, n_factors = 13, N = 734, method = "ULS", rotation = "varimax")
+ULS14 <- EFA(imputedCorr, n_factors = 14, N = 734, method = "ULS", rotation = "varimax")
+ULS15 <- EFA(imputedCorr, n_factors = 15, N = 734, method = "ULS", rotation = "varimax")
+ULS16 <- EFA(imputedCorr, n_factors = 16, N = 734, method = "ULS", rotation = "varimax")
+ULS17 <- EFA(imputedCorr, n_factors = 17, N = 734, method = "ULS", rotation = "varimax")
+ULS18 <- EFA(imputedCorr, n_factors = 18, N = 734, method = "ULS", rotation = "varimax")
+ULS19 <- EFA(imputedCorr, n_factors = 19, N = 734, method = "ULS", rotation = "varimax")
+ULS20 <- EFA(imputedCorr, n_factors = 20, N = 734, method = "ULS", rotation = "varimax")
+
+### display goodness-of-fit stats
+
+ULS05fit <- unlist(ULS05$fit_indices)
+ULS06fit <- unlist(ULS06$fit_indices)
+ULS07fit <- unlist(ULS07$fit_indices)
+ULS08fit <- unlist(ULS08$fit_indices)
+ULS09fit <- unlist(ULS09$fit_indices)
+ULS10fit <- unlist(ULS10$fit_indices)
+ULS11fit <- unlist(ULS11$fit_indices)
+ULS12fit <- unlist(ULS12$fit_indices)
+ULS13fit <- unlist(ULS13$fit_indices)
+ULS14fit <- unlist(ULS14$fit_indices)
+ULS15fit <- unlist(ULS15$fit_indices)
+ULS16fit <- unlist(ULS16$fit_indices)
+ULS17fit <- unlist(ULS17$fit_indices)
+ULS18fit <- unlist(ULS18$fit_indices)
+ULS19fit <- unlist(ULS19$fit_indices)
+ULS20fit <- unlist(ULS20$fit_indices)
+
+ULSfit <- data.frame(ULS05fit, ULS06fit, ULS07fit, ULS08fit, ULS09fit, ULS10fit,
+                     ULS11fit, ULS12fit, ULS13fit, ULS14fit, ULS15fit, ULS16fit,
+                     ULS17fit, ULS18fit, ULS19fit, ULS20fit)
+colnames(ULSfit) <- c("F5", "F6", "F7", "F8", "F9", "F10",
+                      "F11", "F12", "F13", "F14", "F15",
+                      "F16", "F17", "F18", "F19", "F20")
+
+
+ULSfitTabK <- kable(ULSfit, digits=2,
+      caption="Measures of fit (described below) for Factor Analyses with from 5 to 20 Factors")
+kable_styling(ULSfitTabK)
+```
+
+What are thes statistics?
+
+- **chi** chi-squared for the model
+- **df** the number of degrees of freedom in the model
+- **p_chi** the p value for the chi-square statistic
+- **CAF** Common part accounted for, THe extent to which the common variance 
+in the data is captured in the common factor model. Larger amounts of common variance indicate a worse fit (@Lorenzo11).
+- **CFI** Comparative Fit Index, Measure of fit by comparing proposed model with more restrictive baseline mo del. 0 - 1 where 1 indicates perfect fit (@lorenzo11).
+- **RMSEA** Root Mean Square Error of Approximation, degree of misfit in the proposed model based on the residuals. Ranges from 0 to infinity with 0 indicating perfect model fit (@lorenzo11).
+0 **RMSEA_LB** Root Mean Square Error of Approximation 90% confidence interval for RMSEA (@lorenzo11).
+- **AIC** Akaike Information Criterion measures information content in models by maximum likelihood. Lower is better.
+- **BIC** Bayes Information Criterion, similar to AIC but using Bayesian methods  
+
+No documentation for:
+- **Fm**
+- **chi_null**
+- **df_null**
+- **p_null** but they are all zero so I suspect it's a comparison with a model with no correlations between items.  
+
+Comparing the goodness-of-fit measures for models with different numbers of factors,
+we still get some variation and not a definite number of factors to choose. 
+Under the chi-square test, which is not one of the major methods recommended models 
+with from 5-10 factors were most significant (*actually, @watkins20 recommends that it not be used*). the "best" CAF value is at 5 factors. CFI hits 1.00 at 10 
+factors and stays there for larger numbers of factors. RSMEA hits 0.00 (best value) 
+at 11 factors. For AIC and BIC, lower is better and the minima are at 16 and 8 factors, 
+respectively. 
+
+### Variance Explained by Factors
+
+``` {r, ULSvarianceExplained, results="asis", echo=FALSE}
+ULSmodels <- list(ULS05, ULS06, ULS07, ULS08, ULS09, ULS10,
+               ULS11, ULS12, ULS13, ULS14, ULS15, ULS16,
+               ULS17, ULS18, ULS19, ULS20)
+
+
+
+lapply(ULSmodels, function(x)
+    kable(x$vars_accounted, digits = 2, padding = 2, format = "pipe",
+        caption = paste0("Percent Variance Explained for Models with ",
+                         x$settings$n_factors, " Factors")))
+
+## for (i in varExplTab) {
+##     print(i)
+##     }
+    ## kable(x$vavurs_accounted, digits = 2,
+    ##       caption = paste0("Percent Variance Explained for Models with ",
+    ##                        x$settings$n_factors, " Factors")))
+
+```
+
+### Factor Loading Plots
+
+Hard to interpret as number of factors increases?
+
+
+```  {r, ULSfactorLoadings, results="asis", echo=FALSE, fig.keep="high"}
+for (i in 5:20) { 
+    plot(fa(imputedCorr, nfactors = i, n.obs = 734, method = "ULS", rotate = "varimax"),
+         main = paste0("Factor Loadings for Model with ", i, " Factors"))
+}
+
+```
+
+###      Text Presentation of Items in Factors
+
+``` {r, textRepresentFactors, results="asis", echo=FALSE}
+for (i in 5:20) {
+    m1 <- fa(imputedCorr, nfactors = i, n.obs = 734, method = "ULS", rotate="varimax")
+    df1 <- data.frame(matrix(m1$loadings, ncol = ncol(m1$loadings), nrow = nrow(m1$loadings)))
+    df1 <- round(df1, 2)
+   colnames(df1) <- colnames(m1$loadings)
+    rownames(df1) <- rownames(m1$loadings)
+### new column with max for each row
+    df1$largest <- colnames(df1)[apply(df1, 1, which.max)]
+### sort by factor
+    df1 <- df1[order(df1$largest), ]
+### write.csv(df1, file="factors.csv")
+    k1 <- kable(df1, padding = 2, format="pipe",
+                 caption = paste0("Table of Factor Loadings for Models with ",
+                                  i, " Factors, Sorted by Factor"))
+    print(kable_styling(k1))
+    
+
+    
+
+}
+```
+
+### Factors and Text Descriptions
+
+``` {r, factorsAndDescriptions, results="asis", echo=FALSE}
+### write.csv(colnames(imputedCorr), file="cbarqItems.csv")
+itemDesc <- read.csv("cbarqItemDefinitions.csv")
+colnames(itemDesc) <- c("itemNum", "itemNames", "Description")
+
+
+### merge itemDesc with outputs from previous section, remove numeric columns so you display factors and descriptions
+
+
+m2 <- fa(imputedCorr, nfactors = i, n.obs = 734, method = "ULS", rotate = "varimax")
+
+for (i in 5:20) {
+    m2 <- fa(imputedCorr, nfactors = i, n.obs = 734, method = "ULS", rotate = "varimax")
+    df2 <- data.frame(matrix(m2$loadings, ncol = i, nrow = nrow(m2$loadings)))
+    rownames(df2) <- rownames(m2$loadings)
+    colnames(df2) <- colnames(m2$loadings)
+    df2$itemNames <- rownames(df2)
+
+### new column with max for each row
+    df2$largest <- colnames(df2)[apply(df2, 1, which.max)]
+
+
+### sort by factor
+    df2 <- df2[order(df2$largest), ]
+
+    factorDesc <- merge(df2[ ,c("itemNames", "largest")],
+                        itemDesc[ ,c("itemNames", "Description")],
+                        by = "itemNames", all=TRUE)
+    factorDesc <- factorDesc[order(factorDesc$largest), ]
+
+    k2 <- kable(factorDesc, digits = 2, padding = 2, format="pipe",
+                caption = paste0("Factors and Descriptions Sorted by Factor for Models with ",
+                                 i, " Factors"))
+    print(kable_styling(k2))
+    }
+    
+
+```
+
+
+
+### Communalities
+
+@Goretzko21 suggests that information about the communalities of the factors should be reported in publications.
+
+``` {r, communalities, results="asis", echo=FALSE}
+lapply(ULSmodels, function(x)
+    kable(x$h2, digits = 2, padding = 2, format = "pipe",
+          caption = paste0("Communalties for Models with ",
+                           x$n_factors, " Factors")))
+
+
+
+```
+
