@@ -308,7 +308,36 @@ From the EFAtools documentation:
 ``` {r, screePlot, results="asis", echo=FALSE}
 SCREE(imputedCorr, eigen_type = "EFA")
 ```
-  
+
+
+
+
+### Maximum Average Partial Method (MAP)
+
+From the psych package documentation:
+
+> There are multiple ways to determine the appropriate number of factors in exploratory factor analysis. Routines for the Very Simple Structure (VSS) criterion allow one to compare solutions of varying complexity and for different number of factors. Graphic output indicates the "optimal" number of factors for different levels of complexity. The Velicer MAP criterion is another good choice. nfactors finds and plots several of these alternative estimates.
+
+
+
+We are most interested in MAP, which is recommended by @watkins20. 
+VSS is questionable since we don't want to necessarily find the simplest structure.  
+
+Settings:  
+- n = 20 (number of factors, suggested more than the number hypothesized)  
+- rotate = varimax
+fm = minres for least squares  
+- n.obs = 734
+
+
+``` {r, MAR, results="asis", echo=FALSE}
+vss1 <- vss(imputedCorr, n = 20, rotate = "varimax",
+            fm = "minres", n.obs = 734)
+### which.min retrurns the location in the vector of the minimum value.
+```
+
+The minimum value is at `r which.min(vss1$map)` (not shown in graph above).
+
 
 ## Unweighted Least Squares, Varimax Rotation, Models from 5 to 20 Factors
 
