@@ -37,7 +37,7 @@ dds <- dds[!dds$Dog.ID %in% badDogs, ]
 dds$Fear21 <- as.numeric(dds$Fear21)
 dds$Excite35 <- as.numeric(dds$Excite35)
 ```
-
+vu
 # Analysis of Demographic Data
 
 
@@ -298,8 +298,9 @@ sws <- sapply(ddItems, function(x) shapiro.test(x)$statistic)
 swp <- sapply(ddItems, function(y) shapiro.test(y)$p.value)
 
 bigDesc <- data.frame(countMissing, means, sds, mins, maxes, skews, kurts, sws, swp)
-colnames(bigDesc) <- c("Mean", "SD", "Min", "Max", "Skewness", "Kurtosis",
+colnames(bigDesc) <- c("NMissing", "Mean", "SD", "Min", "Max", "Skewness", "Kurtosis",
                        "Shapiro-Wilk Score", "Shapiro-Wilk p")
+
 bigDescK <- kable(bigDesc, digits=2,
       caption="Descriptive Statistics for Detector-C-BARQ Items")
 
@@ -317,12 +318,26 @@ dim(n1)
 
 ```
 
+The number of dogs in this analysis is `r nrow(ddItems)`. To use mean or mode imputation, < 5% of the data should be missing. 
+Items should have no more than `r nrow(ddItems)*0.05` missing if these kinds of imputations will be used. 
+
+``` {r, Missing5Percent, results="asis", echo=FALSE}
+
+highMissing <- bigDesc[bigDesc$countMissing > nrow(ddItems)*0.05, ]
+highMissingK <- kable(highMissing, digits=2,
+                      caption = "Items with > 5 percent missing")
+kable_styling(highMissingK)
+```
+
+There are `r nrow(highMissing)` items with > 5\% missing.  
+
+
 According to Watkins (2021), items should be removed if they have skewness > 2.0 or 
 kurtosis > 7.0. These items would violate the assumptions of the Pearson correlation coefficients 
 that factor analysis is based on. (Do we need to consider the items as ordinal discrete values?)  
 
 Items with skewness > 2.0 include 
-`r md_bullet(largeSkewItems)`
+`r md_bullet(largeSkewItems)`.
 
 items with kurtosis > 7.0 include
 	`r md_bullet(largeKurtItems)`
