@@ -297,7 +297,7 @@ kurts <- sapply(ddItems, kurtosi, na.rm=TRUE)
 sws <- sapply(ddItems, function(x) shapiro.test(x)$statistic)
 swp <- sapply(ddItems, function(y) shapiro.test(y)$p.value)
 
-bigDesc <- data.frame(means, sds, mins, maxes, skews, kurts, sws, swp)
+bigDesc <- data.frame(countMissing, means, sds, mins, maxes, skews, kurts, sws, swp)
 colnames(bigDesc) <- c("Mean", "SD", "Min", "Max", "Skewness", "Kurtosis",
                        "Shapiro-Wilk Score", "Shapiro-Wilk p")
 bigDescK <- kable(bigDesc, digits=2,
